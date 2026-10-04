@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0f766e">
+<title>Observation Coach</title>
+<style>
+:root{--teal:#0f766e;--teal2:#14b8a6;--bg:#f2f8f7;--card:#fff;--text:#18322f;--muted:#607572;--line:#d7e6e3;--good:#16834b;--bad:#c83b3b}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.app{max-width:700px;margin:auto;min-height:100vh;padding:18px 16px 40px}
+header{display:flex;align-items:center;gap:12px;margin-bottom:18px}.logo{width:48px;height:48px;border-radius:15px;background:var(--teal);display:grid;place-items:center;color:white;font-size:25px}
+h1{font-size:24px;margin:0}h2{font-size:22px;margin:10px 0 8px}h3{margin:8px 0}.sub{color:var(--muted);font-size:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:18px;margin:12px 0;box-shadow:0 3px 12px #0f766e0b}
+button{width:100%;border:0;border-radius:14px;padding:15px 16px;font-size:17px;font-weight:700;background:var(--teal);color:white;cursor:pointer;margin-top:10px}
+button.secondary{background:#e2f1ef;color:var(--teal)}button.ghost{background:transparent;color:var(--teal);border:1px solid var(--line)}
+button:active{transform:scale(.99)}button:disabled{opacity:.5}
+.row{display:flex;gap:10px}.row>*{flex:1}
+.setting{display:flex;justify-content:space-between;align-items:center;padding:13px 0;border-bottom:1px solid var(--line)}.setting:last-child{border:0}
+select{padding:9px;border-radius:10px;border:1px solid var(--line);background:white;font-size:16px;color:var(--text)}
+.scene{width:100%;aspect-ratio:16/10;border-radius:16px;overflow:hidden;background:#dbeceb;border:1px solid var(--line)}
+.scene svg{display:block;width:100%;height:100%}
+.timer{text-align:center;font-size:34px;font-weight:800;color:var(--teal);margin:12px}
+.progress{height:9px;background:#dcebe8;border-radius:99px;overflow:hidden}.progress>div{height:100%;background:var(--teal2);transition:width .25s}
+.question{font-size:21px;line-height:1.35;margin:12px 0 18px;font-weight:700}
+.option{text-align:left;background:#f7fbfa;color:var(--text);border:2px solid var(--line);font-weight:600}
+.option.selected{border-color:var(--teal);background:#e3f4f1}.option.correct{border-color:var(--good);background:#e9f8ef}.option.wrong{border-color:var(--bad);background:#fff0f0}
+.feedback{padding:12px;border-radius:12px;margin-top:12px;font-weight:600}.good{background:#e9f8ef;color:var(--good)}.bad{background:#fff0f0;color:var(--bad)}
+.score{font-size:50px;font-weight:800;color:var(--teal);text-align:center;margin:5px}.center{text-align:center}.hidden{display:none!important}
+.history-item{padding:13px 0;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:12px}.history-item:last-child{border:0}.score-small{font-weight:800;color:var(--teal);white-space:nowrap}
+.badge{display:inline-block;padding:5px 9px;border-radius:99px;background:#e2f1ef;color:var(--teal);font-size:12px;font-weight:700}
+.mini{font-size:13px;color:var(--muted);line-height:1.45}
+footer{text-align:center;color:var(--muted);font-size:12px;margin-top:25px}
+@media(max-width:420px){.app{padding:14px 12px 30px}h1{font-size:21px}}
+</style>
+</head>
+<body>
+<div class="app">
+<header>
+  <div class="logo">👁️</div>
+  <div><h1>Observation Coach</h1><div class="sub">Train attention • memory • detail</div></div>
+</header>
+
+<div id="home">
+  <div class="card">
+    <h2>Can you remember what you saw?</h2>
+    <p class="sub">Study a scene carefully. When the picture disappears, answer questions about the details you noticed.</p>
+    <button onclick="startTest()">▶ Start Observation Test</button>
+    <button class="secondary" onclick="showHistory()">📊 My Results</button>
+  </div>
+  <div class="card">
+    <h3>Test settings</h3>
+    <div class="setting"><span>Observation time</span><select id="duration"><option value="15">15 seconds</option><option value="30" selected>30 seconds</option><option value="45">45 seconds</option><option value="60">60 seconds</option></select></div>
+    <div class="setting"><span>Questions</span><select id="qcount"><option value="5">5 questions</option><option value="8" selected>8 questions</option><option value="10">10 questions</option></select></div>
+  </div>
+  <div class="card">
+    <h3>How to get better</h3>
+    <p class="mini">Don't just look at the big picture. Notice colours, positions, numbers, objects, relationships and small details. With practice, try to remember more without taking notes.</p>
+  </div>
+</div>
+
+<div id="observe" class="hidden">
+  <div class="card">
+    <div class="badge" id="sceneLabel">Observation</div>
+    <div class="timer" id="timer">30</div>
+    <div class="progress"><div id="timeBar" style="width:100%"></div></div>
+    <p class="center sub">Study the scene carefully. It will disappear when the timer reaches zero.</p>
+    <div class="scene" id="scene"></div>
+  </div>
+</div>
+
+<div id="quiz" class="hidden">
+  <div class="card">
+    <div class="sub" id="qProgress">Question 1 of 8</div>
+    <div class="progress"><div id="qBar"></div></div>
+    <div class="question" id="question"></div>
+    <div id="options"></div>
+    <div id="feedback"></div>
+    <button id="nextBtn" disabled onclick="nextQuestion()">Next Question →</button>
+  </div>
+</div>
+
+<div id="result" class="hidden">
+  <div class="card center">
+    <div class="badge">Test complete</div>
+    <h2>Your score</h2>
+    <div class="score" id="finalScore">0%</div>
+    <p id="resultText"></p>
+    <button onclick="startTest()">🔄 Try Another Scene</button>
+    <button class="secondary" onclick="goHome()">⌂ Home</button>
+  </div>
+</div>
+
+<div id="history" class="hidden">
+  <div class="card">
+    <h2>My Results</h2>
+    <div id="historyList"></div>
+    <button class="secondary" onclick="goHome()">← Back</button>
+    <button class="ghost" onclick="clearHistory()">Clear History</button>
+  </div>
+</div>
+
+<footer>Observation Coach • Your results stay on this device.</footer>
+</div>
+
+<script>
+const scenes=[
+{
+ name:"The Park",
+ svg:`<svg viewBox="0 0 800 500" xmlns="http://www.w3.org/2000/svg">
+ <rect width="800" height="500" fill="#bfe7ef"/><circle cx="690" cy="85" r="48" fill="#ffd45a"/>
+ <path d="M0 300 Q180 230 360 300 T800 285 V500H0Z" fill="#83c77a"/>
+ <path d="M0 400 Q250 300 500 400 T800 370 V500H0Z" fill="#d9c38a"/>
+ <rect x="120" y="260" width="150" height="12" rx="5" fill="#8b5a35"/><rect x="130" y="270" width="12" height="45" fill="#8b5a35"/><rect x="250" y="270" width="12" height="45" fill="#8b5a35"/>
+ <circle cx="90" cy="190" r="45" fill="#4c9b55"/><rect x="83" y="190" width="14" height="70" fill="#704b2e"/>
+ <circle cx="585" cy="205" r="48" fill="#4c9b55"/><rect x="578" y="205" width="14" height="80" fill="#704b2e"/>
+ <circle cx="395" cy="355" r="28" fill="#e75b5b"/><rect x="385" y="375" width="20" height="42" fill="#35495e"/><circle cx="395" cy="340" r="10" fill="#f3c7a6"/>
+ <rect x="470" y="355" width="55" height="32" rx="5" fill="#4779a8"/><circle cx="485" cy="392" r="10" fill="#333"/><circle cx="510" cy="392" r="10" fill="#333"/>
+ <text x="30" y="465" font-size="24" fill="#47635e">PARK • SUNDAY</text></svg>`,
+ qs:[
+ ["What colour was the bench?","Brown",["Brown","Blue","Green","Red"]],
+ ["Where was the sun?","Upper right",["Upper left","Upper right","Lower right","Centre"]],
+ ["What colour was the person's shirt?","Red",["Red","Blue","Yellow","Green"]],
+ ["How many large trees were shown?","2",["1","2","3","4"]],
+ ["What was beside the person?","A blue bicycle",["A blue bicycle","A red car","A dog","A bench"]],
+ ["What was the ground path colour?","Tan",["Tan","Purple","Blue","Black"]],
+ ["What day was written at the bottom?","Sunday",["Monday","Friday","Saturday","Sunday"]],
+ ["What colour was the bicycle?","Blue",["Blue","Red","Green","Yellow"]],
+ ["Where was the person?","Near the centre",["Far left","Near the centre","Far right","At the top"]],
+ ["What shape was the sun?","Circle",["Square","Triangle","Circle","Star"]]
+ ]},
+{
+ name:"The Kitchen",
+ svg:`<svg viewBox="0 0 800 500" xmlns="http://www.w3.org/2000/svg">
+ <rect width="800" height="500" fill="#f4e6cf"/><rect y="365" width="800" height="135" fill="#c99160"/>
+ <rect x="55" y="85" width="690" height="250" rx="8" fill="#e8edf0"/><rect x="85" y="115" width="190" height="135" fill="#a9dceb"/>
+ <rect x="100" y="130" width="70" height="95" fill="#dff6ff"/><rect x="185" y="130" width="70" height="95" fill="#dff6ff"/>
+ <rect x="330" y="160" width="160" height="100" rx="10" fill="#777"/><circle cx="370" cy="185" r="18" fill="#333"/><circle cx="440" cy="185" r="18" fill="#333"/>
+ <rect x="540" y="135" width="145" height="180" rx="6" fill="#fff"/><rect x="560" y="155" width="105" height="20" fill="#d7ece9"/><rect x="560" y="190" width="105" height="20" fill="#d7ece9"/>
+ <circle cx="405" cy="315" r="42" fill="#d85b5b"/><circle cx="405" cy="315" r="25" fill="#fff1e1"/>
+ <rect x="220" y="285" width="55" height="45" fill="#4f89a8"/><circle cx="235" cy="340" r="7" fill="#333"/><circle cx="260" cy="340" r="7" fill="#333"/>
+ <text x="30" y="465" font-size="24" fill="#694b38">KITCHEN • BREAKFAST</text></svg>`,
+ qs:[
+ ["What colour was the refrigerator?","White",["White","Black","Blue","Red"]],
+ ["What was on the stove?","Two burners",["One burner","Two burners","Three burners","No burners"]],
+ ["What colour was the toaster?","Blue",["Blue","Red","Green","Yellow"]],
+ ["What colour was the bowl/plate in the centre?","Red",["Red","Blue","White","Green"]],
+ ["What was visible through the window?","Sky",["Sky","Trees","Buildings","Nothing"]],
+ ["How many window panes were shown?","2",["1","2","3","4"]],
+ ["What was written at the bottom?","Kitchen • Breakfast",["Kitchen • Breakfast","Lunch • Garden","Home • Sunday","Breakfast • Park"]],
+ ["Where was the refrigerator?","Right side",["Left side","Centre","Right side","Outside"]],
+ ["What colour was the floor?","Brown",["White","Brown","Blue","Green"]],
+ ["What appliance was on the counter?","Toaster",["Microwave","Toaster","Kettle","Blender"]]
+ ]},
+{
+ name:"The Beach",
+ svg:`<svg viewBox="0 0 800 500" xmlns="http://www.w3.org/2000/svg">
+ <rect width="800" height="500" fill="#a9dff0"/><circle cx="105" cy="80" r="42" fill="#ffd85e"/>
+ <path d="M0 275 Q180 235 370 280 T800 260 V390 H0Z" fill="#55aeca"/>
+ <path d="M0 360 Q190 315 390 360 T800 340 V500H0Z" fill="#efd59b"/>
+ <path d="M610 180 q55 -75 110 0 l-15 100 h-85z" fill="#d96c55"/><path d="M645 115 q-30 20 -40 70" fill="none" stroke="#795a3a" stroke-width="10"/><path d="M680 115 q30 20 40 70" fill="none" stroke="#795a3a" stroke-width="10"/>
+ <rect x="170" y="330" width="140" height="55" rx="5" fill="#e25d5d"/><circle cx="200" cy="390" r="13" fill="#333"/><circle cx="280" cy="390" r="13" fill="#333"/>
+ <circle cx="445" cy="350" r="28" fill="#f2c7a6"/><rect x="425" y="375" width="40" height="55" fill="#4b83aa"/>
+ <path d="M445 375 l-20 55 M445 375 l20 55" stroke="#35495e" stroke-width="12"/>
+ <circle cx="545" cy="400" r="24" fill="#f3cf45"/><path d="M545 400 l-8 20 l20 0z" fill="#c68b32"/>
+ <text x="30" y="465" font-size="24" fill="#49645f">BEACH • SUNNY DAY</text></svg>`,
+ qs:[
+ ["What colour was the car?","Red",["Red","Blue","Green","Yellow"]],
+ ["Where was the sun?","Upper left",["Upper left","Upper right","Centre","Lower right"]],
+ ["What colour was the beach umbrella?","Red",["Red","Blue","Green","Yellow"]],
+ ["What colour was the person's shirt?","Blue",["Blue","Red","White","Green"]],
+ ["What was on the sand near the right?","A yellow ball",["A yellow ball","A blue bag","A red hat","A chair"]],
+ ["What colour was the sea?","Blue",["Blue","Green","Brown","Grey"]],
+ ["What was written at the bottom?","Beach • Sunny Day",["Beach • Sunny Day","Park • Sunday","Beach • Evening","Sunny • Holiday"]],
+ ["How many people were shown?","1",["0","1","2","3"]],
+ ["Where was the car?","Left side",["Left side","Centre","Right side","In the sea"]],
+ ["What was the main background colour of the sky?","Light blue",["Light blue","Dark green","Orange","Purple"]]
+ ]}
+];
+
+let currentScene, questions=[], qi=0, score=0, selected=null, timerId=null, remaining=30;
+
+function show(id){["home","observe","quiz","result","history"].forEach(x=>document.getElementById(x).classList.toggle("hidden",x!==id));}
+function goHome(){clearInterval(timerId);show("home")}
+function startTest(){
+ clearInterval(timerId);
+ currentScene=scenes[Math.floor(Math.random()*scenes.length)];
+ const count=+document.getElementById("qcount").value;
+ questions=[...currentScene.qs].sort(()=>Math.random()-.5).slice(0,count);
+ qi=0;score=0;selected=null;remaining=+document.getElementById("duration").value;
+ document.getElementById("sceneLabel").textContent=currentScene.name;
+ document.getElementById("scene").innerHTML=currentScene.svg;
+ document.getElementById("timer").textContent=remaining;
+ document.getElementById("timeBar").style.width="100%";
+ show("observe");
+ timerId=setInterval(()=>{
+   remaining--;
+   document.getElementById("timer").textContent=remaining;
+   document.getElementById("timeBar").style.width=(remaining/(+document.getElementById("duration").value)*100)+"%";
+   if(remaining<=0){clearInterval(timerId);beginQuiz();}
+ },1000);
+}
+function beginQuiz(){document.getElementById("scene").innerHTML="";show("quiz");renderQuestion();}
+function renderQuestion(){
+ selected=null;
+ const q=questions[qi];
+ document.getElementById("qProgress").textContent=`Question ${qi+1} of ${questions.length}`;
+ document.getElementById("qBar").style.width=((qi)/questions.length*100)+"%";
+ document.getElementById("question").textContent=q[0];
+ const box=document.getElementById("options");box.innerHTML="";
+ document.getElementById("feedback").innerHTML="";
+ document.getElementById("nextBtn").disabled=true;
+ [...q[2]].sort(()=>Math.random()-.5).forEach(opt=>{
+   const b=document.createElement("button");b.className="option";b.textContent=opt;
+   b.onclick=()=>choose(b,opt);box.appendChild(b);
+ });
+}
+function choose(btn,opt){
+ if(selected!==null)return;
+ selected=opt;
+ const correct=questions[qi][1];
+ document.querySelectorAll(".option").forEach(b=>{
+   if(b.textContent===correct)b.classList.add("correct");
+ });
+ if(opt===correct){score++;btn.classList.add("correct");document.getElementById("feedback").innerHTML='<div class="feedback good">✓ Correct</div>'}
+ else{btn.classList.add("wrong");document.getElementById("feedback").innerHTML=`<div class="feedback bad">Not quite. The answer was <b>${correct}</b>.</div>`}
+ document.getElementById("nextBtn").disabled=false;
+}
+function nextQuestion(){
+ if(qi<questions.length-1){qi++;renderQuestion()}else finish();
+}
+function finish(){
+ clearInterval(timerId);
+ const pct=Math.round(score/questions.length*100);
+ document.getElementById("finalScore").textContent=pct+"%";
+ let msg=pct>=90?"Excellent observation. Your attention to detail is strong!":pct>=70?"Very good. Keep training the small details.":pct>=50?"Good start. Try slowing down and scanning the whole scene.":"Keep practising. Look systematically: left, centre, right, then top and bottom.";
+ document.getElementById("resultText").textContent=`${score} of ${questions.length} correct. ${msg}`;
+ const history=JSON.parse(localStorage.getItem("observationCoachHistory")||"[]");
+ history.unshift({date:new Date().toLocaleString(),scene:currentScene.name,score,pct,duration:+document.getElementById("duration").value});
+ localStorage.setItem("observationCoachHistory",JSON.stringify(history.slice(0,50)));
+ document.getElementById("qBar").style.width="100%";show("result");
+}
+function showHistory(){
+ const list=document.getElementById("historyList"),h=JSON.parse(localStorage.getItem("observationCoachHistory")||"[]");
+ if(!h.length){list.innerHTML='<p class="sub">No tests recorded yet. Complete your first test and your result will appear here.</p>'}
+ else list.innerHTML=h.map(x=>`<div class="history-item"><div><b>${x.scene}</b><div class="mini">${x.date} • ${x.duration}s</div></div><div class="score-small">${x.pct}%</div></div>`).join("");
+ show("history");
+}
+function clearHistory(){if(confirm("Clear all saved results?")){localStorage.removeItem("observationCoachHistory");showHistory()}}
+</script>
+</body>
+</html>
